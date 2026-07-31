@@ -340,3 +340,26 @@ const config = {
 // ════════════════════════════════════════════════════════════════[...]
 // HELPER FUNCTIONS
 // ═════════════════════════════════════════════════════════════──
+
+/**
+ * Check if a given jid/phone is bot owner
+ * Accepts full JID (12345@s.whatsapp.net), LID formats, or plain numbers
+ */
+export function isOwner(jid) {
+  if (!jid) return false;
+  const normalized = String(jid).split(":")[0].split("@")[0];
+  if (!normalized) return false;
+  const owners = Array.isArray(config.owner?.number) ? config.owner.number : [config.owner?.number];
+  return owners.some((o) => String(o) === normalized);
+}
+
+/**
+ * Set the bot number (used by connection.js when socket opens)
+ */
+export function setBotNumber(number) {
+  if (!number) return;
+  config.bot = config.bot || {};
+  config.bot.number = String(number);
+}
+
+export default config;
