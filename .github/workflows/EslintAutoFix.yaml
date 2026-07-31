@@ -26,9 +26,15 @@ jobs:
       - name: Install dependencies
         run: npm ci
 
-      - name: Run ESLint --fix
+      - name: Run ESLint --fix and save report
         run: |
-          npx eslint "plugins/" --ext .js --fix || true
+          npx eslint "plugins/" --ext .js --fix -f unix -o eslint-report.txt || true
+
+      - name: Upload ESLint report
+        uses: actions/upload-artifact@v4
+        with:
+          name: eslint-report
+          path: eslint-report.txt
 
       - name: Commit fixes
         run: |
