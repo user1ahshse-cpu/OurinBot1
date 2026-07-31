@@ -46,47 +46,49 @@ function formatSchedule(schedules) {
 }
 
 function help(m) {
-  return m.reply(
-    [
-      "*PENGATURAN INFO LOKER OTOMATIS*",
-      "",
-      `• \`${m.prefix}loker aktif\``,
-      "  Aktifkan broadcast loker di grup ini (akan meminta pilihan mode).",
-      "",
-      `• \`${m.prefix}loker pilih <opsi>\``,
-      "  Pilih mode setelah menjalankan `aktif`. Opsi: group | group_channel | private",
-      "  Contoh: `.loker pilih group`",
-      "",
-      `• \`${m.prefix}loker nonaktif\``,
-      "  Matikan broadcast loker untuk grup ini.",
-      "",
-      `• \`${m.prefix}loker kata kunci [kata...]\``,
-      "  Set filter kata kunci (pisah spasi).",
-      `  Contoh: \`${m.prefix}loker kata kunci developer python\`",
-      "",
-      `• \`${m.prefix}loker kategori [nama]\``,
-      "  Filter berdasarkan kategori Remotive.",
-      `  Opsi: ${CATEGORY_OPTIONS.slice(0, 6).join(", ")}, dst.",
-      `  Contoh: \`${m.prefix}loker kategori software-dev\`",
-      "",
-      `• \`${m.prefix}loker jadwal 08:00 13:00 20:00\``,
-      "  Atur jam broadcast (maks 3 waktu).",
-      "",
-      `• \`${m.prefix}loker jumlah 5\``,
-      "  Jumlah loker per broadcast (1–10).",
-      "",
-      `• \`${m.prefix}loker test\``,
-      "  Kirim preview loker sekarang ke chat ini.",
-      "",
-      `• \`${m.prefix}loker status\``,
-      "  Lihat konfigurasi aktif.",
-      "",
-      `• \`${m.prefix}loker reset\``,
-      "  Hapus cache loker yang sudah terkirim.",
-      "",
-      "Sumber: Remotive + Arbeitnow (gratis, tanpa API key).",
-    ].join("\n")
-  );
+  // Build help text without embedding template literals inside quoted strings
+  const p = m.prefix || ".";
+  const lines = [
+    "*PENGATURAN INFO LOKER OTOMATIS*",
+    "",
+    `• \`${p}loker aktif\``,
+    "  Aktifkan broadcast loker di grup ini (akan meminta pilihan mode).",
+    "",
+    `• \`${p}loker pilih <opsi>\``,
+    "  Pilih mode setelah menjalankan aktif. Opsi: group | group_channel | private",
+    "  Contoh: `.loker pilih group`",
+    "",
+    `• \`${p}loker nonaktif\``,
+    "  Matikan broadcast loker untuk grup ini.",
+    "",
+    `• \`${p}loker kata kunci [kata...]\``,
+    "  Set filter kata kunci (pisah spasi).",
+    `  Contoh: ${p}loker kata kunci developer python`,
+    "",
+    `• \`${p}loker kategori [nama]\``,
+    "  Filter berdasarkan kategori Remotive.",
+    `  Opsi: ${CATEGORY_OPTIONS.slice(0, 6).join(", ")}, dst.",
+    `  Contoh: ${p}loker kategori software-dev`,
+    "",
+    `• \`${p}loker jadwal 08:00 13:00 20:00\``,
+    "  Atur jam broadcast (maks 3 waktu).",
+    "",
+    `• \`${p}loker jumlah 5\``,
+    "  Jumlah loker per broadcast (1–10).",
+    "",
+    `• \`${p}loker test\``,
+    "  Kirim preview loker sekarang ke chat ini.",
+    "",
+    `• \`${p}loker status\``,
+    "  Lihat konfigurasi aktif.",
+    "",
+    `• \`${p}loker reset\``,
+    "  Hapus cache loker yang sudah terkirim.",
+    "",
+    "Sumber: Remotive + Arbeitnow (gratis, tanpa API key).",
+  ];
+
+  return m.reply(lines.join("\n"));
 }
 
 function parseTime(value) {
@@ -240,7 +242,7 @@ async function handler(m) {
     return m.reply(`✅ Kategori loker diset: ${choice}`);
   }
 
-  // ── JADWAL ────────────────────────────────────────────────────────────
+  // ── JADWAL ──────────────────────────────────────────────────────────
   if (action === "jadwal" || action === "schedule") {
     const schedules = buildSchedules(args);
     if (!schedules) return m.reply("❌ Format jadwal salah. Contoh: .loker jadwal 08:00 13:00 20:00");
@@ -248,7 +250,7 @@ async function handler(m) {
     return m.reply(`✅ Jadwal disimpan: ${formatSchedule(schedules)} WIB`);
   }
 
-  // ── JUMLAH ────────────────────────────────────────────────────────────
+  // ── JUMLAH ──────────────────────────────────────────────────────────
   if (action === "jumlah" || action === "count" || action === "number") {
     const n = parseInt(args[0]);
     if (isNaN(n) || n < 1 || n > 10) return m.reply("❌ Jumlah harus angka antara 1-10");
@@ -270,10 +272,12 @@ async function handler(m) {
     }
   }
 
-  // ── STATUS ────────────────────────────────────────────────────────────
+  // ── STATUS ──────────────────────────────────────────────────────────
   if (action === "status") {
     const status = getLokerStatus();
-    return m.reply(`📋 Status Loker:\nEnabled: ${status.enabled ? 'Ya' : 'Tidak'}\nTargets: ${(status.targets||[]).join(', ') || '(kosong)'}\nJadwal: ${formatSchedule(status.schedules||[])}\nKategori: ${status.category || '(semua)'}\nKata kunci: ${(status.keywords||[]).join(', ') || '(kosong)'}\nJumlah per broadcast: ${status.perBatch || 3}`);
+    return m.reply(
+      `📋 Status Loker:\nEnabled: ${status.enabled ? 'Ya' : 'Tidak'}\nTargets: ${(status.targets||[]).join(', ') || '(kosong)'}\nJadwal: ${formatSchedule(status.schedules||[])}\nKategori: ${status.category || '(tidak diset)'}\nPer Broadcast: ${status.perBatch || '(default)'}\nKeywords: ${(status.keywords||[]).join(', ') || '(kosong)'}`
+    );
   }
 
   // ── RESET CACHE / SENT IDS ────────────────────────────────────────────
