@@ -58,11 +58,11 @@ function parseArgs(args) {
   let category = "";
 
   for (const arg of args) {
-    const lower = String(arg || "").toLowerCase();
+    const lower = arg.toLowerCase();
     if (CATEGORY_MAP[lower]) {
       category = CATEGORY_MAP[lower];
-    } else if (arg) {
-      keywords.push(String(arg));
+    } else {
+      keywords.push(arg);
     }
   }
 
@@ -73,14 +73,15 @@ async function handler(m) {
   const args = (m.args || []).map((a) => String(a).trim()).filter(Boolean);
   const { keywords, category } = parseArgs(args);
 
-  if (m.react) await m.react("🔍");
+  await m.react("🔍");
 
   try {
-    const settings = getLokerStatus() || {};
+    const settings = getLokerStatus();
 
     // Merge keyword dari settings + keyword dari user
-    const mergedKeywords = (keywords && keywords.length) ? keywords : (settings.keywords || []);
-    const mergedCategories = category ? [category] : (settings.categories || []);
+    const mergedKeywords = keywords.length ? keywords : settings.keywords || [];
+
+    const mergedCategories = category ? [category] : settings.categories || [];
 
     const jobs = await fetchNewJobs({
       sources: ["remotive", "arbeitnow"],
@@ -91,25 +92,25 @@ async function handler(m) {
     });
 
     if (!jobs || !jobs.length) {
-      if (m.react) await m.react("❌");
-      const noMsg = (mergedKeywords && mergedKeywords.length)
+      await m.react("❌");
+      const noMsg = mergedKeywords && mergedKeywords.length
         ? "Tidak ada loker untuk kata kunci: _" + mergedKeywords.join(", ") + "_"
         : "Tidak ada loker terbaru saat ini.";
       const out = ["❌ *Lowongan tidak ditemukan*", "", noMsg].join("\n");
       return m.reply(out);
     }
 
-    const msgs = (jobs || []).map((j) => formatLokerMessage(j)).filter(Boolean).join('\n\n');
+    const msgs = jobs.map((j) => formatLokerMessage(j)).filter(Boolean).join('\n\n');
     if (!msgs) {
-      if (m.react) await m.react("❌");
+      await m.react("❌");
       return m.reply("ℹ️ Tidak ada loker yang bisa ditampilkan.");
     }
 
-    if (m.react) await m.react("✅");
+    await m.react("✅");
     return m.reply("📣 Hasil Pencarian:\n\n" + msgs);
   } catch (e) {
-    if (m.react) await m.react("⚠️");
-    return m.reply && m.reply(`❌ Terjadi kesalahan: ${e && e.message ? e.message : String(e)}`);
+    await m.react("⚠️");
+    return m.reply(`❌ Terjadi kesalahan: ${e?.message || String(e)}`);
   }
 }
 
