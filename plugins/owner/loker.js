@@ -46,43 +46,43 @@ function formatSchedule(schedules) {
 }
 
 function help(m) {
-  // Build help text without embedding template literals inside quoted strings
+  // Build help text using concatenation to avoid nested template literal issues
   const p = m.prefix || ".";
   const lines = [
     "*PENGATURAN INFO LOKER OTOMATIS*",
     "",
-    `• \`${p}loker aktif\``,
+    "• `" + p + "loker aktif`",
     "  Aktifkan broadcast loker di grup ini (akan meminta pilihan mode).",
     "",
-    `• \`${p}loker pilih <opsi>\``,
+    "• `" + p + "loker pilih <opsi>`",
     "  Pilih mode setelah menjalankan aktif. Opsi: group | group_channel | private",
     "  Contoh: `.loker pilih group`",
     "",
-    `• \`${p}loker nonaktif\``,
+    "• `" + p + "loker nonaktif`",
     "  Matikan broadcast loker untuk grup ini.",
     "",
-    `• \`${p}loker kata kunci [kata...]\``,
+    "• `" + p + "loker kata kunci [kata...]`",
     "  Set filter kata kunci (pisah spasi).",
-    `  Contoh: ${p}loker kata kunci developer python`,
+    "  Contoh: " + p + "loker kata kunci developer python",
     "",
-    `• \`${p}loker kategori [nama]\``,
+    "• `" + p + "loker kategori [nama]`",
     "  Filter berdasarkan kategori Remotive.",
-    `  Opsi: ${CATEGORY_OPTIONS.slice(0, 6).join(", ")}, dst.",
-    `  Contoh: ${p}loker kategori software-dev`,
+    "  Opsi: " + CATEGORY_OPTIONS.slice(0, 6).join(", ") + ", dst.",
+    "  Contoh: " + p + "loker kategori software-dev",
     "",
-    `• \`${p}loker jadwal 08:00 13:00 20:00\``,
+    "• `" + p + "loker jadwal 08:00 13:00 20:00`",
     "  Atur jam broadcast (maks 3 waktu).",
     "",
-    `• \`${p}loker jumlah 5\``,
+    "• `" + p + "loker jumlah 5`",
     "  Jumlah loker per broadcast (1–10).",
     "",
-    `• \`${p}loker test\``,
+    "• `" + p + "loker test`",
     "  Kirim preview loker sekarang ke chat ini.",
     "",
-    `• \`${p}loker status\``,
+    "• `" + p + "loker status`",
     "  Lihat konfigurasi aktif.",
     "",
-    `• \`${p}loker reset\``,
+    "• `" + p + "loker reset`",
     "  Hapus cache loker yang sudah terkirim.",
     "",
     "Sumber: Remotive + Arbeitnow (gratis, tanpa API key).",
@@ -276,22 +276,4 @@ async function handler(m) {
   if (action === "status") {
     const status = getLokerStatus();
     return m.reply(
-      `📋 Status Loker:\nEnabled: ${status.enabled ? 'Ya' : 'Tidak'}\nTargets: ${(status.targets||[]).join(', ') || '(kosong)'}\nJadwal: ${formatSchedule(status.schedules||[])}\nKategori: ${status.category || '(tidak diset)'}\nPer Broadcast: ${status.perBatch || '(default)'}\nKeywords: ${(status.keywords||[]).join(', ') || '(kosong)'}`
-    );
-  }
-
-  // ── RESET CACHE / SENT IDS ────────────────────────────────────────────
-  if (action === "reset") {
-    try {
-      updateLokerSettings((cur) => ({ ...cur, sentIds: [] }));
-      return m.reply("✅ Cache loker (sentIds) berhasil di-reset.");
-    } catch (e) {
-      return m.reply(`❌ Gagal reset: ${e.message}`);
-    }
-  }
-
-  // Default
-  return help(m);
-}
-
-export { pluginConfig as config, handler };
+      `📋 Status Loker:\nEnabled: ${status.enabled ? 'Ya' : 'Tidak'}\nTargets: ${(status.targets||[]).join(', ') || '(kosong)'}\nJadwal: ${formatSchedule(status.schedules||[])}\nKategori: ${sta[...]
