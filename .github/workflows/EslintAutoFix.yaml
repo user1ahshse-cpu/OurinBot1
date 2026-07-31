@@ -46,7 +46,7 @@ jobs:
         uses: peter-evans/create-pull-request@v5
         with:
           token: ${{ secrets.GITHUB_TOKEN }}
-          commit-message: chore: apply ESLint --fix (auto)
-          branch: eslint-fix-auto/${{ github.run_id }}
+          commit-message: "chore: apply ESLint --fix (auto)"
+          branch: "eslint-fix-auto/${{ github.run_id }}"
           title: "chore: ESLint fixes (auto)"
           body: "This PR contains automatic ESLint --fix changes."
