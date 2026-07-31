@@ -275,5 +275,38 @@ async function handler(m) {
   // ── STATUS ──────────────────────────────────────────────────────────
   if (action === "status") {
     const status = getLokerStatus();
-    return m.reply(
-      `📋 Status Loker:\nEnabled: ${status.enabled ? 'Ya' : 'Tidak'}\nTargets: ${(status.targets||[]).join(', ') || '(kosong)'}\nJadwal: ${formatSchedule(status.schedules||[])}\nKategori: ${sta[...]
+    const enabled = status?.enabled ? "Ya" : "Tidak";
+    const targets = Array.isArray(status?.targets) && status.targets.length ? status.targets.join(", ") : "(kosong)";
+    const jadwal = formatSchedule(status?.schedules || []);
+    const kategori = status?.category || "(tidak diset)";
+    const perBatch = status?.perBatch || "(default)";
+    const keywords = Array.isArray(status?.keywords) && status.keywords.length ? status.keywords.join(", ") : "(kosong)";
+
+    const out = [
+      "📋 Status Loker:",
+      `Enabled: ${enabled}`,
+      `Targets: ${targets}`,
+      `Jadwal: ${jadwal || "(tidak ada)"} WIB`,
+      `Kategori: ${kategori}`,
+      `Per Broadcast: ${perBatch}`,
+      `Keywords: ${keywords}`,
+    ].join("\n");
+
+    return m.reply(out);
+  }
+
+  // ── RESET CACHE / SENT IDS ────────────────────────────────────────────
+  if (action === "reset") {
+    try {
+      updateLokerSettings((cur) => ({ ...cur, sentIds: [] }));
+      return m.reply("✅ Cache loker (sentIds) berhasil di-reset.");
+    } catch (e) {
+      return m.reply(`❌ Gagal reset: ${e.message}`);
+    }
+  }
+
+  // Default
+  return help(m);
+}
+
+export { pluginConfig as config, handler };
