@@ -7,7 +7,10 @@
     "start": "set NODE_ENV=development&& node index.js",
     "dev": "node index.js",
     "test": "echo \"Error: no test specified\" && exit 1",
-    "lint": "eslint plugins/"
+    "lint": "eslint plugins/",
+    "check:syntax": "node ./scripts/check-syntax.mjs",
+    "check:exports": "node ./scripts/check-exports.mjs",
+    "sanity-check": "npm run check:syntax && npm run check:exports"
   },
   "keywords": [
     "whatsapp",
@@ -95,6 +98,8 @@
     "@eslint/js": "^10.0.1",
     "eslint": "^10.2.1",
     "globals": "^17.5.0",
-    "nodemon": "^3.1.11"
+    "nodemon": "^3.1.11",
+    "@babel/parser": "^7.22.11",
+    "fast-glob": "^3.2.12"
   }
 }
