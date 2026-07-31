@@ -79,13 +79,9 @@ async function handler(m) {
     const settings = getLokerStatus();
 
     // Merge keyword dari settings + keyword dari user
-    const mergedKeywords = keywords.length
-      ? keywords
-      : settings.keywords;
+    const mergedKeywords = keywords.length ? keywords : settings.keywords || [];
 
-    const mergedCategories = category
-      ? [category]
-      : settings.categories;
+    const mergedCategories = category ? [category] : settings.categories || [];
 
     const jobs = await fetchNewJobs({
       sources: ["remotive", "arbeitnow"],
@@ -95,11 +91,27 @@ async function handler(m) {
       sentIds: {}, // Cek manual tidak filter sentIds — user mau lihat semua
     });
 
-    if (!jobs.length) {
+    if (!jobs || !jobs.length) {
       await m.react("❌");
-      return m.reply(
-        [
-          "❌ *Lowongan tidak ditemukan*",
-          "",
-          keywords.length
-            ? `Tidak ada loker untuk kata kunci: _${keywords.join(", 
+      const noMsg = mergedKeywords && mergedKeywords.length
+        ? "Tidak ada loker untuk kata kunci: _" + mergedKeywords.join(", ") + "_"
+        : "Tidak ada loker terbaru saat ini.";
+      const out = ["❌ *Lowongan tidak ditemukan*", "", noMsg].join("\n");
+      return m.reply(out);
+    }
+
+    const msgs = jobs.map((j) => formatLokerMessage(j)).filter(Boolean).join('\n\n');
+    if (!msgs) {
+      await m.react("❌");
+      return m.reply("ℹ️ Tidak ada loker yang bisa ditampilkan.");
+    }
+
+    await m.react("✅");
+    return m.reply("📣 Hasil Pencarian:\n\n" + msgs);
+  } catch (e) {
+    await m.react("⚠️");
+    return m.reply(`❌ Terjadi kesalahan: ${e?.message || String(e)}`);
+  }
+}
+
+export { pluginConfig as config, handler };
