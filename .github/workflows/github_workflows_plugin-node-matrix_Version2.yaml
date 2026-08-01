@@ -1,80 +1,49 @@
-import fs from "fs";
-import path from "path";
+name: Plugin & Node matrix check
 
-const pluginsDir = path.join(process.cwd(), "plugins");
-const outLog = "plugin-check-" + (process.env.RUNNER_OS || "local") + ".log";
-function log(...a) { console.log(...a); fs.appendFileSync(outLog, a.join(" ") + "\n"); }
+on:
+  workflow_dispatch:
+  push:
+    branches:
+      - main
 
-async function tryImport(file) {
-  try {
-    const m = await import(file);
-    return { ok: true, exports: Object.keys(m) };
-  } catch (e) {
-    return { ok: false, error: String(e) };
-  }
-}
+jobs:
+  smoke:
+    runs-on: ubuntu-latest
+    strategy:
+      matrix:
+        node-version: [ '20', '24' ]
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
 
-async function main() {
-  log("Scanning plugins directory:", pluginsDir);
-  if (!fs.existsSync(pluginsDir)) {
-    log("No plugins directory found. Exiting success.");
-    process.exit(0);
-  }
+      - name: Setup Node.js
+        uses: actions/setup-node@v4
+        with:
+          node-version: ${{ matrix.node-version }}
 
-  const files = fs.readdirSync(pluginsDir).filter((f) => f.endsWith(".js"));
-  let failed = 0;
+      - name: Install system libs (for canvas/sharp)
+        run: |
+          sudo apt-get update
+          sudo apt-get install -y libcairo2-dev libjpeg-dev libpango1.0-dev libgif-dev libpng-dev libfreetype6-dev build-essential pkg-config
 
-  for (const f of files) {
-    const fullPath = path.join(pluginsDir, f);
-    log("\n--> Checking", f);
-    const fileUrl = `file://${fullPath}`;
-    const res = await tryImport(fileUrl);
-    if (!res.ok) {
-      failed++;
-      log(`  ✖ import failed: ${res.error}`);
-      continue;
-    }
-    log(`  ✓ imported OK, exports: ${res.exports.join(", ") || "(none)"}`);
+      - name: Install dependencies
+        run: |
+          if [ -f package-lock.json ]; then npm ci; else npm install; fi
 
-    // Try calling common init functions safely (short timeout)
-    try {
-      const mod = await import(fileUrl);
-      if (typeof mod.default === "function") {
-        try {
-          const maybe = mod.default();
-          if (maybe && typeof maybe.then === "function") {
-            await Promise.race([maybe, new Promise((_, rej) => setTimeout(() => rej(new Error("init timeout")), 3000))]);
-          }
-          log("  ✓ default() executed (sync or resolved).");
-        } catch (e) {
-          log("  ! default() threw:", String(e).slice(0, 300));
-        }
-      } else if (typeof mod.init === "function") {
-        try {
-          const maybe = mod.init();
-          if (maybe && typeof maybe.then === "function") {
-            await Promise.race([maybe, new Promise((_, rej) => setTimeout(() => rej(new Error("init timeout")), 3000))]);
-          }
-          log("  ✓ init() executed (sync or resolved).");
-        } catch (e) {
-          log("  ! init() threw:", String(e).slice(0, 300));
-        }
-      }
-    } catch (_) {
-      // ignore repeated import errors
-    }
-  }
+      - name: Syntax check all JS files
+        run: |
+          find . -type f -name '*.js' -not -path './node_modules/*' -print0 | xargs -0 -n1 node --check
 
-  if (failed > 0) {
-    log(`\nPlugins check finished: ${failed} plugin(s) failed to import.`);
-    process.exit(2);
-  } else {
-    log("\nPlugins check finished: all imports OK.");
-    process.exit(0);
-  }
-}
+      - name: Run ESLint (project config)
+        run: |
+          npx eslint . --ext .js -f unix -o eslint-report-${{ matrix.node-version }}.txt || true
 
-main().catch((err) => {
-  console.error("Fatal:", err);
-  process.exit(3);
-});
+      - name: Upload ESLint report
+        uses: actions/upload-artifact@v4
+        with:
+          name: eslint-report-${{ matrix.node-version }}
+          path: eslint-report-${{ matrix.node-version }}.txt
+
+      - name: Run plugin import smoke test
+        run: |
+          node check-plugins.js
