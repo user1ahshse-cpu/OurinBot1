@@ -1,0 +1,39 @@
+name: Remove node_modules from repository
+
+on:
+  workflow_dispatch:
+
+permissions:
+  contents: write
+
+jobs:
+  remove_node_modules:
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout repository
+        uses: actions/checkout@v4
+        with:
+          fetch-depth: 0
+          persist-credentials: true
+
+      - name: Remove tracked node_modules and commit
+        run: |
+          set -e
+          echo "Checking for node_modules in repository root..."
+          if [ -d "node_modules" ]; then
+            echo "node_modules directory found. Removing from git index..."
+          else
+            echo "No node_modules directory present at repo root. Proceeding to check tracked files anyway."
+          fi
+
+          git rm -r --cached node_modules || true
+          git add .gitignore || true
+
+          if git diff --cached --quiet; then
+            echo "No tracked node_modules to remove — nothing to commit."
+            exit 0
+          else
+            git commit -m "chore: remove node_modules from repository and add .gitignore"
+            echo "Pushing commit to default branch (main)..."
+            git push origin HEAD:main
+          fi
