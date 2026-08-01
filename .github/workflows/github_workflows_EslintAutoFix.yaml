@@ -12,6 +12,7 @@ permissions:
 jobs:
   eslint-fix-pr:
     runs-on: ubuntu-latest
+    timeout-minutes: 20
     steps:
       - name: Checkout repository
         uses: actions/checkout@v4
@@ -54,12 +55,27 @@ jobs:
           name: eslint-report
           path: eslint-report.txt
 
+      - name: Debug git state before commit
+        run: |
+          echo "---- git status ----"
+          git status --porcelain --branch || true
+          echo "---- git log -1 ----"
+          git --no-pager log -1 --stat || true
+          echo "---- remotes ----"
+          git remote -v || true
+          echo "---- HEAD ----"
+          git rev-parse --abbrev-ref HEAD || true
+          echo "---- show staged ----"
+          git diff --cached --name-only || true
+
       - name: Commit fixes (only update tracked files)
         run: |
+          set -x
           git config user.name "github-actions[bot]"
           git config user.email "41898282+github-actions[bot]@users.noreply.github.com"
           # stage only modified tracked files so node_modules / new files are NOT added
           git add -u
+          git status
           if git diff --cached --quiet; then
             echo "No lint fixes to commit"
             exit 0
