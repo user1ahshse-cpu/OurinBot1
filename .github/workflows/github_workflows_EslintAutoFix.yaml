@@ -86,9 +86,8 @@ jobs:
       - name: Create Pull Request with fixes
         uses: peter-evans/create-pull-request@v5
         with:
-          # Prefer a Personal Access Token (PERSONAL_TOKEN) stored in repo secrets for reliable write access.
-          # If you want to use the default GITHUB_TOKEN instead, change this to: token: ${{ secrets.GITHUB_TOKEN }}
-          token: ${{ secrets.PERSONAL_TOKEN }}
+          # Use PERSONAL_TOKEN if provided in repository secrets, otherwise fallback to GITHUB_TOKEN
+          token: ${{ secrets.PERSONAL_TOKEN || secrets.GITHUB_TOKEN }}
           commit-message: "chore: apply ESLint --fix (auto)"
           branch: "eslint-fix-auto/${{ github.run_id }}"
           title: "chore: ESLint fixes (auto)"
