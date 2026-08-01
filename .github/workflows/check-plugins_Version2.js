@@ -1,0 +1,82 @@
+// check-plugins.js
+// Run with: node check-plugins.js
+import fs from "fs";
+import path from "path";
+
+const pluginsDir = path.join(process.cwd(), "plugins");
+const outLog = "plugin-check-" + (process.env.RUNNER_OS || "local") + ".log";
+function log(...a) { console.log(...a); fs.appendFileSync(outLog, a.join(" ") + "\n"); }
+
+async function tryImport(file) {
+  try {
+    const m = await import(file);
+    return { ok: true, exports: Object.keys(m) };
+  } catch (e) {
+    return { ok: false, error: String(e) };
+  }
+}
+
+async function main() {
+  log("Scanning plugins directory:", pluginsDir);
+  if (!fs.existsSync(pluginsDir)) {
+    log("No plugins directory found. Exiting success.");
+    process.exit(0);
+  }
+
+  const files = fs.readdirSync(pluginsDir).filter((f) => f.endsWith(".js"));
+  let failed = 0;
+
+  for (const f of files) {
+    const fullPath = path.join(pluginsDir, f);
+    log("\n--> Checking", f);
+    const fileUrl = `file://${fullPath}`;
+    const res = await tryImport(fileUrl);
+    if (!res.ok) {
+      failed++;
+      log(`  ✖ import failed: ${res.error}`);
+      continue;
+    }
+    log(`  ✓ imported OK, exports: ${res.exports.join(", ") || "(none)"}`);
+
+    // Try calling common init functions safely (short timeout)
+    try {
+      const mod = await import(fileUrl);
+      if (typeof mod.default === "function") {
+        try {
+          const maybe = mod.default();
+          if (maybe && typeof maybe.then === "function") {
+            await Promise.race([maybe, new Promise((_, rej) => setTimeout(() => rej(new Error("init timeout")), 3000))]);
+          }
+          log("  ✓ default() executed (sync or resolved).");
+        } catch (e) {
+          log("  ! default() threw:", String(e).slice(0, 300));
+        }
+      } else if (typeof mod.init === "function") {
+        try {
+          const maybe = mod.init();
+          if (maybe && typeof maybe.then === "function") {
+            await Promise.race([maybe, new Promise((_, rej) => setTimeout(() => rej(new Error("init timeout")), 3000))]);
+          }
+          log("  ✓ init() executed (sync or resolved).");
+        } catch (e) {
+          log("  ! init() threw:", String(e).slice(0, 300));
+        }
+      }
+    } catch (_) {
+      // ignore repeated import errors
+    }
+  }
+
+  if (failed > 0) {
+    log(`\nPlugins check finished: ${failed} plugin(s) failed to import.`);
+    process.exit(2);
+  } else {
+    log("\nPlugins check finished: all imports OK.");
+    process.exit(0);
+  }
+}
+
+main().catch((err) => {
+  console.error("Fatal:", err);
+  process.exit(3);
+});
